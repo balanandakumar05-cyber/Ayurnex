@@ -159,12 +159,17 @@ function App() {
         language: language.code,
       });
 
-      setAnswer(data.answer || 'AYURNEX did not return an answer.');
+      setAnswer(
+        data.answer || 'AYURNEX did not return an answer.'
+      );
+
       setSources(data.sources || []);
 
       setHistory((oldHistory) => [
         cleanQuestion,
-        ...oldHistory.filter((item) => item !== cleanQuestion),
+        ...oldHistory.filter(
+          (item) => item !== cleanQuestion
+        ),
       ]);
     } catch (error) {
       setAnswer(
@@ -172,6 +177,7 @@ function App() {
           ? error.message
           : 'Unable to connect to the AYURNEX backend.'
       );
+
       setSources([]);
     } finally {
       setIsLoading(false);
@@ -191,6 +197,33 @@ function App() {
     }
   };
 
+  /* =========================
+     FEATURE CARD ACTIONS
+  ========================= */
+
+  const handleFeatureClick = (title) => {
+    switch (title) {
+      case 'AI Answers':
+        selectPage('ask');
+        break;
+
+      case 'Trusted Sources':
+        selectPage('resources');
+        break;
+
+      case 'Query History':
+        selectPage('ask');
+        break;
+
+      case 'Explore Knowledge':
+        selectPage('resources');
+        break;
+
+      default:
+        break;
+    }
+  };
+
   /* ==================================================
      STEP 1 — COUNTRY SELECTION
   ================================================== */
@@ -199,27 +232,22 @@ function App() {
     return (
       <div className="selection-page">
         <div className="selection-container">
-          {/* LOGO */}
 
           <div className="selection-logo">
             <span>AYUR</span>
             <span className="logo-blue">NEX</span>
           </div>
 
-          {/* SMALL TITLE */}
-
-          <div className="selection-eyebrow">WELCOME TO AYURNEX</div>
-
-          {/* MAIN TITLE */}
+          <div className="selection-eyebrow">
+            WELCOME TO AYURNEX
+          </div>
 
           <h1>Select your country</h1>
 
           <p className="selection-description">
-            Choose your country to help AYURNEX provide information using the
-            appropriate regional context.
+            Choose your country to help AYURNEX provide information
+            using the appropriate regional context.
           </p>
-
-          {/* COUNTRY OPTIONS */}
 
           <div className="selection-options">
             {countries.map((item) => (
@@ -227,30 +255,37 @@ function App() {
                 type="button"
                 key={item.code}
                 className={`selection-card ${
-                  country?.code === item.code ? 'selected' : ''
+                  country?.code === item.code
+                    ? 'selected'
+                    : ''
                 }`}
-                onClick={() => handleCountrySelect(item)}
+                onClick={() =>
+                  handleCountrySelect(item)
+                }
               >
-                <div className="selection-flag">{item.flag}</div>
+                <div className="selection-flag">
+                  {item.flag}
+                </div>
 
                 <div className="selection-info">
                   <h2>{item.name}</h2>
-
                   <p>{item.description}</p>
                 </div>
 
                 <div className="selection-check">
-                  {country?.code === item.code ? '✓' : ''}
+                  {country?.code === item.code
+                    ? '✓'
+                    : ''}
                 </div>
               </button>
             ))}
           </div>
 
-          {/* CONTINUE */}
-
           <button
             type="button"
-            className={`selection-continue ${country ? 'enabled' : ''}`}
+            className={`selection-continue ${
+              country ? 'enabled' : ''
+            }`}
             onClick={handleCountryContinue}
             disabled={!country}
           >
@@ -274,18 +309,15 @@ function App() {
     return (
       <div className="selection-page">
         <div className="selection-container">
-          {/* LOGO */}
 
           <div className="selection-logo">
             <span>AYUR</span>
             <span className="logo-blue">NEX</span>
           </div>
 
-          {/* SMALL TITLE */}
-
-          <div className="selection-eyebrow">ONE MORE STEP</div>
-
-          {/* MAIN TITLE */}
+          <div className="selection-eyebrow">
+            ONE MORE STEP
+          </div>
 
           <h1>Select your language</h1>
 
@@ -293,38 +325,43 @@ function App() {
             Choose the language you would like to use with AYURNEX.
           </p>
 
-          {/* LANGUAGE OPTIONS */}
-
           <div className="language-options">
             {languages.map((item) => (
               <button
                 type="button"
                 key={item.code}
                 className={`language-card ${
-                  language?.code === item.code ? 'selected' : ''
+                  language?.code === item.code
+                    ? 'selected'
+                    : ''
                 }`}
-                onClick={() => handleLanguageSelect(item)}
+                onClick={() =>
+                  handleLanguageSelect(item)
+                }
               >
-                <div className="language-flag">{item.flag}</div>
+                <div className="language-flag">
+                  {item.flag}
+                </div>
 
                 <div className="language-info">
                   <h2>{item.name}</h2>
-
                   <p>{item.nativeName}</p>
                 </div>
 
                 <div className="language-check">
-                  {language?.code === item.code ? '✓' : ''}
+                  {language?.code === item.code
+                    ? '✓'
+                    : ''}
                 </div>
               </button>
             ))}
           </div>
 
-          {/* CONTINUE */}
-
           <button
             type="button"
-            className={`selection-continue ${language ? 'enabled' : ''}`}
+            className={`selection-continue ${
+              language ? 'enabled' : ''
+            }`}
             onClick={handleLanguageContinue}
             disabled={!language}
           >
@@ -332,12 +369,12 @@ function App() {
             <span>→</span>
           </button>
 
-          {/* BACK */}
-
           <button
             type="button"
             className="back-button"
-            onClick={() => setSelectionStep('country')}
+            onClick={() =>
+              setSelectionStep('country')
+            }
           >
             ← Back to country selection
           </button>
@@ -352,10 +389,10 @@ function App() {
 
   return (
     <div className="app">
+
       {/* ================= HEADER ================= */}
 
       <header className="navbar">
-        {/* LOGO */}
 
         <button
           type="button"
@@ -366,37 +403,60 @@ function App() {
           <span className="logo-blue">NEX</span>
         </button>
 
-        {/* NAVIGATION */}
-
         <nav className="nav-links">
+
           <button
             type="button"
-            className={`nav-link ${activePage === 'home' ? 'active' : ''}`}
-            onClick={() => selectPage('home')}
+            className={`nav-link ${
+              activePage === 'home'
+                ? 'active'
+                : ''
+            }`}
+            onClick={() =>
+              selectPage('home')
+            }
           >
             Home
           </button>
 
           <button
             type="button"
-            className={`nav-link ${activePage === 'ask' ? 'active' : ''}`}
-            onClick={() => selectPage('ask')}
+            className={`nav-link ${
+              activePage === 'ask'
+                ? 'active'
+                : ''
+            }`}
+            onClick={() =>
+              selectPage('ask')
+            }
           >
             Ask
           </button>
 
           <button
             type="button"
-            className={`nav-link ${activePage === 'about' ? 'active' : ''}`}
-            onClick={() => selectPage('about')}
+            className={`nav-link ${
+              activePage === 'about'
+                ? 'active'
+                : ''
+            }`}
+            onClick={() =>
+              selectPage('about')
+            }
           >
             About
           </button>
 
           <button
             type="button"
-            className={`nav-link ${activePage === 'resources' ? 'active' : ''}`}
-            onClick={() => selectPage('resources')}
+            className={`nav-link ${
+              activePage === 'resources'
+                ? 'active'
+                : ''
+            }`}
+            onClick={() =>
+              selectPage('resources')
+            }
           >
             Resources
           </button>
@@ -426,19 +486,30 @@ function App() {
           <button
             type="button"
             className="sign-in"
-            onClick={() => alert('Sign-in will be connected later.')}
+            onClick={() =>
+              alert(
+                'Sign-in will be connected later.'
+              )
+            }
           >
             Sign In
           </button>
+
         </nav>
       </header>
 
-      {/* ================= HOME ================= */}
+      {/* ==================================================
+         HOME
+      ================================================== */}
 
       {activePage === 'home' && (
         <main className="home-page">
+
           <section className="hero">
-            <div className="eyebrow">AI-POWERED AYURVEDA</div>
+
+            <div className="eyebrow">
+              AI-POWERED AYURVEDA
+            </div>
 
             <h1>
               Your AI-Powered
@@ -447,7 +518,8 @@ function App() {
             </h1>
 
             <p className="hero-description">
-              Search Ayurvedic knowledge, get reliable AI-powered answers,
+              Search Ayurvedic knowledge, get reliable AI-powered
+              answers,
               <br className="desktop-break" />
               and explore verified traditional wisdom.
             </p>
@@ -455,11 +527,16 @@ function App() {
             {/* SEARCH */}
 
             <div className="search-box">
-              <span className="search-icon">⌕</span>
+
+              <span className="search-icon">
+                ⌕
+              </span>
 
               <input
                 value={question}
-                onChange={(e) => setQuestion(e.target.value)}
+                onChange={(e) =>
+                  setQuestion(e.target.value)
+                }
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     askQuestion();
@@ -471,80 +548,115 @@ function App() {
               <button
                 type="button"
                 className="ask-button"
-                onClick={() => askQuestion()}
+                onClick={() =>
+                  askQuestion()
+                }
               >
                 Ask AYURNEX
                 <span>→</span>
               </button>
+
             </div>
 
             {/* SUGGESTIONS */}
 
             <div className="try-section">
-              <strong>Try asking:</strong>
+
+              <strong>
+                Try asking:
+              </strong>
 
               <div className="suggestions">
+
                 {suggestions.map((item) => (
                   <button
                     type="button"
                     key={item}
-                    onClick={() => askQuestion(item)}
+                    onClick={() =>
+                      askQuestion(item)
+                    }
                   >
                     {item}
                   </button>
                 ))}
+
               </div>
+
             </div>
+
           </section>
 
-          {/* FEATURES */}
+          {/* ==================================================
+             FEATURES
+          ================================================== */}
 
           <section className="features">
+
             {features.map((feature) => (
+
               <button
                 type="button"
                 className="feature-card"
                 key={feature.title}
-                onClick={() => {
-                  if (feature.title === 'AI Answers') {
-                    selectPage('ask');
-                  } else {
-                    alert(
-                      `${feature.title} will be expanded in the next stage.`
-                    );
-                  }
-                }}
+                onClick={() =>
+                  handleFeatureClick(
+                    feature.title
+                  )
+                }
               >
-                <div className="feature-icon">{feature.icon}</div>
 
-                <h3>{feature.title}</h3>
+                <div className="feature-icon">
+                  {feature.icon}
+                </div>
 
-                <p>{feature.text}</p>
+                <h3>
+                  {feature.title}
+                </h3>
+
+                <p>
+                  {feature.text}
+                </p>
+
               </button>
+
             ))}
+
           </section>
+
         </main>
       )}
 
-      {/* ================= ASK ================= */}
+      {/* ==================================================
+         ASK PAGE
+      ================================================== */}
 
       {activePage === 'ask' && (
-        <main className="content-page">
-          <section className="ask-page">
-            <div className="eyebrow">AYURNEX ASSISTANT</div>
 
-            <h2>Ask about Ayurveda</h2>
+        <main className="content-page">
+
+          <section className="ask-page">
+
+            <div className="eyebrow">
+              AYURNEX ASSISTANT
+            </div>
+
+            <h2>
+              Ask about Ayurveda
+            </h2>
 
             <p className="page-description">
-              Ask a question and AYURNEX will return an AI-generated,
-              source-based response.
+              Ask a question and AYURNEX will return an
+              AI-generated, source-based response.
             </p>
 
             <div className="large-search">
+
               <input
                 autoFocus
                 value={question}
-                onChange={(e) => setQuestion(e.target.value)}
+                onChange={(e) =>
+                  setQuestion(e.target.value)
+                }
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     askQuestion();
@@ -553,121 +665,227 @@ function App() {
                 placeholder="e.g. What are the traditional uses of Ashwagandha?"
               />
 
-              <button type="button" onClick={() => askQuestion()}>
+              <button
+                type="button"
+                onClick={() =>
+                  askQuestion()
+                }
+              >
                 Ask AYURNEX →
               </button>
+
             </div>
 
             {/* LOADING */}
 
             {isLoading && (
+
               <div className="response-card">
+
                 <div className="loader"></div>
 
-                <p>Thinking...</p>
+                <p>
+                  Thinking...
+                </p>
+
               </div>
+
             )}
 
             {/* RESPONSE */}
 
             {!isLoading && answer && (
-              <div className="response-card">
-                <div className="response-label">AI RESPONSE</div>
 
-                <p>{answer}</p>
+              <div className="response-card">
+
+                <div className="response-label">
+                  AI RESPONSE
+                </div>
+
+                <p>
+                  {answer}
+                </p>
 
                 <div className="sources">
-                  <strong>Sources</strong>
+
+                  <strong>
+                    Sources
+                  </strong>
 
                   {sources.length > 0 ? (
+
                     <div className="source-list">
-                      {sources.map((source, index) => (
-                        <div className="source-item" key={`${source.title}-${source.page_start}-${index}`}>
-                          <div>
-                            <strong>{source.title}</strong>
-                            {source.heading && <span> · {source.heading}</span>}
+
+                      {sources.map(
+                        (source, index) => (
+
+                          <div
+                            className="source-item"
+                            key={`${source.title}-${source.page_start}-${index}`}
+                          >
+
+                            <div>
+
+                              <strong>
+                                {source.title}
+                              </strong>
+
+                              {source.heading && (
+                                <span>
+                                  {' '}
+                                  ·{' '}
+                                  {source.heading}
+                                </span>
+                              )}
+
+                            </div>
+
+                            {(source.page_start ||
+                              source.page_end) && (
+
+                              <small>
+
+                                Pages{' '}
+                                {source.page_start ??
+                                  '?'}
+
+                                {source.page_end &&
+                                source.page_end !==
+                                  source.page_start
+                                  ? `–${source.page_end}`
+                                  : ''}
+
+                              </small>
+
+                            )}
+
                           </div>
-                          {(source.page_start || source.page_end) && (
-                            <small>
-                              Pages {source.page_start ?? '?'}
-                              {source.page_end && source.page_end !== source.page_start
-                                ? `–${source.page_end}`
-                                : ''}
-                            </small>
-                          )}
-                        </div>
-                      ))}
+
+                        )
+                      )}
+
                     </div>
+
                   ) : (
-                    <p>No supporting sources were returned.</p>
+
+                    <p>
+                      No supporting sources were
+                      returned.
+                    </p>
+
                   )}
+
                 </div>
+
               </div>
+
             )}
 
             {/* HISTORY */}
 
             {history.length > 0 && (
-              <div className="history-card">
-                <h3>Recent Questions</h3>
 
-                {history.slice(0, 5).map((item) => (
-                  <button
-                    type="button"
-                    key={item}
-                    onClick={() => askQuestion(item)}
-                  >
-                    {item}
-                  </button>
-                ))}
+              <div className="history-card">
+
+                <h3>
+                  Recent Questions
+                </h3>
+
+                {history
+                  .slice(0, 5)
+                  .map((item) => (
+
+                    <button
+                      type="button"
+                      key={item}
+                      onClick={() =>
+                        askQuestion(item)
+                      }
+                    >
+                      {item}
+                    </button>
+
+                  ))}
+
               </div>
+
             )}
+
           </section>
+
         </main>
+
       )}
 
-      {/* ================= ABOUT ================= */}
+      {/* ==================================================
+         ABOUT
+      ================================================== */}
 
       {activePage === 'about' && (
+
         <main className="content-page">
+
           <section className="info-page">
-            <div className="eyebrow">ABOUT AYURNEX</div>
 
-            <h2>Making Ayurvedic knowledge easier to explore.</h2>
+            <div className="eyebrow">
+              ABOUT AYURNEX
+            </div>
+
+            <h2>
+              Making Ayurvedic knowledge easier to explore.
+            </h2>
 
             <p>
-              AYURNEX is designed as an AI-powered interface for exploring
-              Ayurvedic knowledge through natural-language questions.
+              AYURNEX is designed as an AI-powered interface
+              for exploring Ayurvedic knowledge through
+              natural-language questions.
             </p>
 
             <p>
-              The selected country helps the system provide appropriate regional
-              context.
+              The selected country helps the system provide
+              appropriate regional context.
             </p>
+
           </section>
+
         </main>
+
       )}
 
-      {/* ================= RESOURCES ================= */}
+      {/* ==================================================
+         RESOURCES
+      ================================================== */}
 
       {activePage === 'resources' && (
-        <main className="content-page">
-          <section className="info-page">
-            <div className="eyebrow">RESOURCES</div>
 
-            <h2>Ayurvedic Knowledge Resources</h2>
+        <main className="content-page">
+
+          <section className="info-page">
+
+            <div className="eyebrow">
+              RESOURCES
+            </div>
+
+            <h2>
+              Ayurvedic Knowledge Resources
+            </h2>
 
             <p>
-              This section can later display references and documents returned
-              by the RAG pipeline.
+              This section can later display references
+              and documents returned by the RAG pipeline.
             </p>
 
             <div className="resource-placeholder">
-              RAG sources and reference documents will appear here.
+              RAG sources and reference documents
+              will appear here.
             </div>
+
           </section>
+
         </main>
+
       )}
+
     </div>
   );
 }
