@@ -4,14 +4,19 @@ import hashlib
 
 from .chunker import chunk_pages
 from .config import Settings
-from .database import connection, find_document_by_hash, insert_chunks, upsert_document
+from .database import (
+    connection,
+    find_document_by_hash,
+    insert_chunks,
+    upsert_document,
+)
 from .embeddings import GeminiEmbedder
 from .pdf_loader import find_pdfs, load_pdf
 from .text_cleaner import clean_pages
 
 
-# MVP: ingest only 20 Ayurveda chunks.
-MAX_MVP_CHUNKS = 20
+# Process 40 chunks per ingestion run.
+MAX_CHUNKS_PER_RUN = 40
 
 
 def file_sha256(path) -> str:
@@ -24,13 +29,29 @@ def file_sha256(path) -> str:
     return digest.hexdigest()
 
 
+def get_stored_chunk_count(conn, document_id) -> int:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT COUNT(*)
+            FROM document_chunks
+            WHERE document_id = %s
+            """,
+            (document_id,),
+        )
+        return cur.fetchone()[0]
+
+
 def ingest(settings: Settings) -> None:
     pdfs = find_pdfs(settings.documents_dir)
 
     print(f"Found {len(pdfs)} PDF files.")
 
     if not pdfs:
-        print(f"Add verified Ayurveda PDFs under {settings.documents_dir} and run again.")
+        print(
+            f"Add verified Ayurveda PDFs under "
+            f"{settings.documents_dir} and run again."
+        )
         return
 
     embedder = GeminiEmbedder(settings)
@@ -39,9 +60,10 @@ def ingest(settings: Settings) -> None:
 
         for path in pdfs:
 
-            # MVP: process only the Approved AYUSH document.
+            # Keep the legal Patent Act document out of
+            # the Ayurveda medical knowledge base.
             if not path.name.lower().startswith("approved-ayush"):
-                print(f"Skipping for MVP: {path.name}")
+                print(f"Skipping non-Ayurveda document: {path.name}")
                 continue
 
             print(f"\nProcessing: {path.name}")
@@ -49,10 +71,6 @@ def ingest(settings: Settings) -> None:
             digest = file_sha256(path)
 
             existing = find_document_by_hash(conn, digest)
-
-            if existing:
-                print(f"Skipped duplicate document already stored as {existing[1]}.")
-                continue
 
             loaded = load_pdf(path)
 
@@ -70,38 +88,85 @@ def ingest(settings: Settings) -> None:
                 print("Failed: no non-empty chunks after extraction.")
                 continue
 
-            # MVP: keep only the first 20 chunks.
-            chunks = chunks[:MAX_MVP_CHUNKS]
+            total_chunks = len(chunks)
 
-            print(f"Chunks selected for MVP: {len(chunks)}")
+            # If the document already exists, resume from the
+            # number of chunks already stored.
+            if existing:
+                document_id = existing[0]
 
-            embeddings = embedder.embed_texts(
-                [chunk.content for chunk in chunks]
+                stored_count = get_stored_chunk_count(
+                    conn,
+                    document_id,
+                )
+
+                print(f"Chunks already stored: {stored_count}")
+
+                if stored_count >= total_chunks:
+                    print("All chunks are already stored.")
+                    continue
+
+                start_index = stored_count
+
+            else:
+                document_id = upsert_document(
+                    conn,
+                    path,
+                    digest,
+                    loaded.page_count,
+                    loaded.metadata,
+                )
+
+                start_index = 0
+
+            end_index = min(
+                start_index + MAX_CHUNKS_PER_RUN,
+                total_chunks,
             )
 
-            document_id = upsert_document(
-                conn,
-                path,
-                digest,
-                loaded.page_count,
-                loaded.metadata,
+            chunks_to_process = chunks[start_index:end_index]
+
+            print(f"Total chunks created: {total_chunks}")
+            print(
+                f"Processing chunks "
+                f"{start_index + 1}-{end_index} "
+                f"of {total_chunks}"
+            )
+
+            print("Generating embeddings...")
+
+            embeddings = embedder.embed_texts(
+                [chunk.content for chunk in chunks_to_process]
             )
 
             insert_chunks(
                 conn,
                 document_id,
-                chunks,
+                chunks_to_process,
                 embeddings,
             )
 
             conn.commit()
 
-            print(f"Pages extracted: {loaded.page_count}")
-            print(f"Chunks stored: {len(chunks)}")
-            print("\nMVP ingestion completed successfully.")
-            print("Stopping after 20 Ayurveda chunks.")
+            print(
+                f"Chunks stored this run: "
+                f"{len(chunks_to_process)}"
+            )
 
-            return
+            remaining = total_chunks - end_index
+
+            print(f"Remaining chunks: {remaining}")
+
+            if remaining == 0:
+                print(
+                    "\nFull Ayurveda document ingestion "
+                    "completed successfully."
+                )
+            else:
+                print(
+                    "\nBatch completed successfully."
+                    "\nRun the same command again to continue."
+                )
 
 
 if __name__ == "__main__":

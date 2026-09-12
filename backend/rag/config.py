@@ -56,44 +56,69 @@ class Settings:
                 "GEMINI_API_KEY is missing. Add it to backend/.env."
             )
 
-        dimension = int(os.getenv("EMBEDDING_DIMENSION", "1536"))
+        # Local Sentence Transformer produces 384-dimensional vectors.
+        dimension = int(
+            os.getenv("EMBEDDING_DIMENSION", "384")
+        )
 
-        if dimension != 1536:
+        if dimension != 384:
             raise ConfigurationError(
-                f"EMBEDDING_DIMENSION must be exactly 1536 "
-                f"for the existing database, got {dimension}."
+                f"EMBEDDING_DIMENSION must be exactly 384 "
+                f"for the local embedding model, got {dimension}."
             )
 
-        overlap = int(os.getenv("CHUNK_OVERLAP", "150"))
-        size = int(os.getenv("CHUNK_SIZE", "1000"))
+        overlap = int(
+            os.getenv("CHUNK_OVERLAP", "150")
+        )
+
+        size = int(
+            os.getenv("CHUNK_SIZE", "1000")
+        )
 
         if size <= 0 or overlap < 0 or overlap >= size:
             raise ConfigurationError(
                 "CHUNK_SIZE must be positive and "
-                "CHUNK_OVERLAP must be >= 0 and smaller than CHUNK_SIZE."
+                "CHUNK_OVERLAP must be >= 0 and "
+                "smaller than CHUNK_SIZE."
             )
 
         return cls(
             database_url=database_url,
+
+            # Gemini is still used for answer generation.
             gemini_api_key=api_key,
+
+            # Local embedding model.
             embedding_model=os.getenv(
                 "EMBEDDING_MODEL",
-                "gemini-embedding-001"
+                "paraphrase-multilingual-MiniLM-L12-v2",
             ),
+
+            # Gemini answer-generation model.
             generation_model=os.getenv(
                 "GENERATION_MODEL",
-                "gemini-2.5-flash"
+                "gemini-3.6-flash",
             ),
+
+            # Local model produces 384 dimensions.
             embedding_dimension=dimension,
-            top_k=int(os.getenv("TOP_K", "8")),
+
+            top_k=int(
+                os.getenv("TOP_K", "8")
+            ),
+
             chunk_size=size,
             chunk_overlap=overlap,
 
-            # data/ is at the AYURNEX project root
+            # data/ is at the AYURNEX project root.
             documents_dir=Path(
                 os.getenv(
                     "DOCUMENTS_DIR",
-                    str(PROJECT_DIR / "data" / "documents")
+                    str(
+                        PROJECT_DIR
+                        / "data"
+                        / "documents"
+                    ),
                 )
             ),
         )
