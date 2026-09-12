@@ -1,4 +1,5 @@
 from backend.rag.rag_pipeline import answer_question
+
 from backend.schemas.chat import ChatResponse, Source
 
 
