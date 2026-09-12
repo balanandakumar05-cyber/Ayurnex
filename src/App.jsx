@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import './App.css';
+import { askAyurnex } from './services/api';
 
 const countries = [
   {
@@ -151,32 +152,30 @@ function App() {
     setAnswer('');
     setSources([]);
 
-    /*
-      TEMPORARY RESPONSE
+    try {
+      const data = await askAyurnex({
+        question: cleanQuestion,
+        country: country.code,
+        language: language.code,
+      });
 
-      Later we will replace this with:
-
-      Backend API
-        ↓
-      RAG
-        ↓
-      Gemini
-    */
-
-    setTimeout(() => {
-      const selectedLanguage = language?.code === 'hi' ? 'Hindi' : 'English';
-
-      setAnswer(
-        `AYURNEX received your question for ${country.name} in ${selectedLanguage}. The real AI/RAG response will appear here once the backend is connected.`
-      );
+      setAnswer(data.answer || 'AYURNEX did not return an answer.');
+      setSources(data.sources || []);
 
       setHistory((oldHistory) => [
         cleanQuestion,
         ...oldHistory.filter((item) => item !== cleanQuestion),
       ]);
-
+    } catch (error) {
+      setAnswer(
+        error instanceof Error
+          ? error.message
+          : 'Unable to connect to the AYURNEX backend.'
+      );
+      setSources([]);
+    } finally {
       setIsLoading(false);
-    }, 700);
+    }
   };
 
   /* =========================
@@ -580,11 +579,28 @@ function App() {
                 <div className="sources">
                   <strong>Sources</strong>
 
-                  <p>
-                    {sources.length > 0
-                      ? sources.join(', ')
-                      : 'Sources from the RAG knowledge base will appear here.'}
-                  </p>
+                  {sources.length > 0 ? (
+                    <div className="source-list">
+                      {sources.map((source, index) => (
+                        <div className="source-item" key={`${source.title}-${source.page_start}-${index}`}>
+                          <div>
+                            <strong>{source.title}</strong>
+                            {source.heading && <span> · {source.heading}</span>}
+                          </div>
+                          {(source.page_start || source.page_end) && (
+                            <small>
+                              Pages {source.page_start ?? '?'}
+                              {source.page_end && source.page_end !== source.page_start
+                                ? `–${source.page_end}`
+                                : ''}
+                            </small>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>No supporting sources were returned.</p>
+                  )}
                 </div>
               </div>
             )}

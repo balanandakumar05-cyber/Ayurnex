@@ -1125,3 +1125,32 @@ button {
     font-size: 15px;
   }
 }
+
+.source-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.source-item {
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fafafa;
+}
+
+.source-item > div {
+  color: #172033;
+  line-height: 1.45;
+}
+
+.source-item span {
+  color: #667085;
+  font-weight: 400;
+}
+
+.source-item small {
+  display: block;
+  margin-top: 5px;
+  color: #667085;
+}
