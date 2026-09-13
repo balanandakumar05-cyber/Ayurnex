@@ -104,7 +104,7 @@ class Settings:
             embedding_dimension=dimension,
 
             top_k=int(
-                os.getenv("TOP_K", "8")
+                os.getenv("TOP_K", "5")
             ),
 
             chunk_size=size,

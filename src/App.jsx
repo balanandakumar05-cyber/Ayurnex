@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import './App.css';
 import { askAyurnex } from './services/api';
 
@@ -87,6 +88,7 @@ function App() {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [sources, setSources] = useState([]);
+  const [resourceSources, setResourceSources] = useState([]);
   const [history, setHistory] = useState([]);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -163,7 +165,37 @@ function App() {
         data.answer || 'AYURNEX did not return an answer.'
       );
 
-      setSources(data.sources || []);
+      const returnedSources = data.sources || [];
+
+      setSources(returnedSources);
+
+      /* =========================
+         SAVE SOURCES FOR RESOURCES PAGE
+      ========================= */
+
+      setResourceSources((oldSources) => {
+        const combinedSources = [
+          ...oldSources,
+          ...returnedSources,
+        ];
+
+        const uniqueSources = combinedSources.filter(
+          (source, index, array) =>
+            index ===
+            array.findIndex(
+              (item) =>
+                item.title === source.title &&
+                item.page_start === source.page_start &&
+                item.page_end === source.page_end
+            )
+        );
+
+        return uniqueSources;
+      });
+
+      /* =========================
+         SAVE QUESTION HISTORY
+      ========================= */
 
       setHistory((oldHistory) => [
         cleanQuestion,
@@ -190,6 +222,12 @@ function App() {
 
   const selectPage = (page) => {
     setActivePage(page);
+
+    /*
+      Do NOT clear resourceSources here.
+      Resources should remain available after
+      navigating away from the Ask page.
+    */
 
     if (page !== 'ask') {
       setAnswer('');
@@ -702,9 +740,11 @@ function App() {
                   AI RESPONSE
                 </div>
 
-                <p>
-                  {answer}
-                </p>
+                <div className="answer-content">
+                  <ReactMarkdown>
+                    {answer}
+                  </ReactMarkdown>
+                </div>
 
                 <div className="sources">
 
@@ -871,14 +911,75 @@ function App() {
             </h2>
 
             <p>
-              This section can later display references
-              and documents returned by the RAG pipeline.
+              References retrieved from the AYURNEX knowledge base.
             </p>
 
-            <div className="resource-placeholder">
-              RAG sources and reference documents
-              will appear here.
-            </div>
+            {resourceSources.length > 0 ? (
+
+              <div className="source-list">
+
+                {resourceSources.map(
+                  (source, index) => (
+
+                    <div
+                      className="source-item"
+                      key={`${source.title}-${source.page_start}-${source.page_end}-${index}`}
+                    >
+
+                      <div>
+
+                        <strong>
+                          📄 {source.title}
+                        </strong>
+
+                        {source.heading && (
+                          <span>
+                            {' · '}
+                            {source.heading}
+                          </span>
+                        )}
+
+                      </div>
+
+                      {(source.page_start ||
+                        source.page_end) && (
+
+                        <small>
+                          Pages{' '}
+                          {source.page_start ?? '?'}
+
+                          {source.page_end &&
+                          source.page_end !== source.page_start
+                            ? `–${source.page_end}`
+                            : ''}
+                        </small>
+
+                      )}
+
+                      {source.similarity != null && (
+
+                        <small>
+                          Relevance:{' '}
+                          {(source.similarity * 100).toFixed(1)}%
+                        </small>
+
+                      )}
+
+                    </div>
+
+                  )
+                )}
+
+              </div>
+
+            ) : (
+
+              <div className="resource-placeholder">
+                Ask a question first. Sources retrieved by the
+                AYURNEX RAG pipeline will appear here.
+              </div>
+
+            )}
 
           </section>
 

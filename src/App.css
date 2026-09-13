@@ -1154,3 +1154,17 @@ button {
   margin-top: 5px;
   color: #667085;
 }
+/* Markdown answer formatting */
+.answer-content {
+  text-align: left;
+}
+
+.answer-content h1,
+.answer-content h2,
+.answer-content h3,
+.answer-content h4,
+.answer-content p,
+.answer-content ul,
+.answer-content ol {
+  text-align: left;
+}
