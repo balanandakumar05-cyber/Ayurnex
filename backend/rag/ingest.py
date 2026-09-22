@@ -15,100 +15,166 @@ from .pdf_loader import find_pdfs, load_pdf
 from .text_cleaner import clean_pages
 
 
-# Process 40 chunks per ingestion run.
-MAX_CHUNKS_PER_RUN = 40
+# Documents that should NOT be part of the Ayurveda/AYUSH
+# medical knowledge base.
+EXCLUDED_FILES = {
+    "PATENT ACT1970.pdf",
+}
 
 
 def file_sha256(path) -> str:
     digest = hashlib.sha256()
 
     with path.open("rb") as source:
-        for block in iter(lambda: source.read(1024 * 1024), b""):
+        for block in iter(
+            lambda: source.read(1024 * 1024),
+            b"",
+        ):
             digest.update(block)
 
     return digest.hexdigest()
 
 
-def get_stored_chunk_count(conn, document_id) -> int:
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT COUNT(*)
-            FROM document_chunks
-            WHERE document_id = %s
-            """,
-            (document_id,),
-        )
-        return cur.fetchone()[0]
-
-
 def ingest(settings: Settings) -> None:
+
+    # ---------------------------------------------------------
+    # 1. Find all PDFs
+    # ---------------------------------------------------------
     pdfs = find_pdfs(settings.documents_dir)
 
     print(f"Found {len(pdfs)} PDF files.")
 
     if not pdfs:
         print(
-            f"Add verified Ayurveda PDFs under "
-            f"{settings.documents_dir} and run again."
+            f"No PDFs found in: "
+            f"{settings.documents_dir}"
         )
         return
 
     embedder = GeminiEmbedder(settings)
 
+    total_documents = 0
+    total_chunks = 0
+    skipped_documents = 0
+    failed_documents = 0
+
+    # ---------------------------------------------------------
+    # 2. Connect to PostgreSQL
+    # ---------------------------------------------------------
     with connection(settings.database_url) as conn:
 
         for path in pdfs:
 
-            # Keep the legal Patent Act document out of
-            # the Ayurveda medical knowledge base.
-            if not path.name.lower().startswith("approved-ayush"):
-                print(f"Skipping non-Ayurveda document: {path.name}")
+            print("\n" + "=" * 70)
+            print(f"Processing: {path.name}")
+            print("=" * 70)
+
+            # -------------------------------------------------
+            # Skip excluded documents
+            # -------------------------------------------------
+            if path.name in EXCLUDED_FILES:
+                print(
+                    f"Skipping excluded document: "
+                    f"{path.name}"
+                )
+                skipped_documents += 1
                 continue
 
-            print(f"\nProcessing: {path.name}")
+            try:
 
-            digest = file_sha256(path)
+                # ---------------------------------------------
+                # 3. Calculate document hash
+                # ---------------------------------------------
+                digest = file_sha256(path)
 
-            existing = find_document_by_hash(conn, digest)
-
-            loaded = load_pdf(path)
-
-            pages = clean_pages(
-                [(page.page_number, page.text) for page in loaded.pages]
-            )
-
-            chunks = chunk_pages(
-                pages,
-                settings.chunk_size,
-                settings.chunk_overlap,
-            )
-
-            if not chunks:
-                print("Failed: no non-empty chunks after extraction.")
-                continue
-
-            total_chunks = len(chunks)
-
-            # If the document already exists, resume from the
-            # number of chunks already stored.
-            if existing:
-                document_id = existing[0]
-
-                stored_count = get_stored_chunk_count(
+                # ---------------------------------------------
+                # 4. Skip duplicate documents
+                # ---------------------------------------------
+                existing = find_document_by_hash(
                     conn,
-                    document_id,
+                    digest,
                 )
 
-                print(f"Chunks already stored: {stored_count}")
+                if existing:
+                    print(
+                        "Duplicate document detected."
+                    )
+                    print(
+                        f"Already stored as: "
+                        f"{existing[1]}"
+                    )
 
-                if stored_count >= total_chunks:
-                    print("All chunks are already stored.")
+                    skipped_documents += 1
                     continue
 
-                start_index = stored_count
+                # ---------------------------------------------
+                # 5. Extract PDF
+                # ---------------------------------------------
+                loaded = load_pdf(path)
 
-            else:
+                print(
+                    f"Pages extracted: "
+                    f"{loaded.page_count}"
+                )
+
+                # ---------------------------------------------
+                # 6. Clean page text
+                # ---------------------------------------------
+                pages = clean_pages(
+                    [
+                        (
+                            page.page_number,
+                            page.text,
+                        )
+                        for page in loaded.pages
+                    ]
+                )
+
+                # ---------------------------------------------
+                # 7. Create chunks
+                # ---------------------------------------------
+                chunks = chunk_pages(
+                    pages,
+                    settings.chunk_size,
+                    settings.chunk_overlap,
+                )
+
+                if not chunks:
+                    print(
+                        "Failed: no non-empty chunks "
+                        "after extraction."
+                    )
+
+                    failed_documents += 1
+                    continue
+
+                print(
+                    f"Chunks created: "
+                    f"{len(chunks)}"
+                )
+
+                # ---------------------------------------------
+                # 8. Generate local embeddings
+                # ---------------------------------------------
+                print(
+                    "Generating embeddings..."
+                )
+
+                embeddings = embedder.embed_texts(
+                    [
+                        chunk.content
+                        for chunk in chunks
+                    ]
+                )
+
+                print(
+                    f"Embeddings generated: "
+                    f"{len(embeddings)}"
+                )
+
+                # ---------------------------------------------
+                # 9. Store document metadata
+                # ---------------------------------------------
                 document_id = upsert_document(
                     conn,
                     path,
@@ -117,60 +183,88 @@ def ingest(settings: Settings) -> None:
                     loaded.metadata,
                 )
 
-                start_index = 0
-
-            end_index = min(
-                start_index + MAX_CHUNKS_PER_RUN,
-                total_chunks,
-            )
-
-            chunks_to_process = chunks[start_index:end_index]
-
-            print(f"Total chunks created: {total_chunks}")
-            print(
-                f"Processing chunks "
-                f"{start_index + 1}-{end_index} "
-                f"of {total_chunks}"
-            )
-
-            print("Generating embeddings...")
-
-            embeddings = embedder.embed_texts(
-                [chunk.content for chunk in chunks_to_process]
-            )
-
-            insert_chunks(
-                conn,
-                document_id,
-                chunks_to_process,
-                embeddings,
-            )
-
-            conn.commit()
-
-            print(
-                f"Chunks stored this run: "
-                f"{len(chunks_to_process)}"
-            )
-
-            remaining = total_chunks - end_index
-
-            print(f"Remaining chunks: {remaining}")
-
-            if remaining == 0:
-                print(
-                    "\nFull Ayurveda document ingestion "
-                    "completed successfully."
+                # ---------------------------------------------
+                # 10. Store chunks + embeddings
+                # ---------------------------------------------
+                insert_chunks(
+                    conn,
+                    document_id,
+                    chunks,
+                    embeddings,
                 )
-            else:
+
+                # ---------------------------------------------
+                # 11. Commit this document
+                # ---------------------------------------------
+                conn.commit()
+
+                total_documents += 1
+                total_chunks += len(chunks)
+
                 print(
-                    "\nBatch completed successfully."
-                    "\nRun the same command again to continue."
+                    f"Successfully stored: "
+                    f"{path.name}"
                 )
+
+                print(
+                    f"Chunks stored: "
+                    f"{len(chunks)}"
+                )
+
+            except Exception as exc:
+
+                # Roll back only the current document
+                # so another PDF can still be processed.
+                conn.rollback()
+
+                failed_documents += 1
+
+                print(
+                    f"FAILED: {path.name}"
+                )
+
+                print(
+                    f"Reason: {exc}"
+                )
+
+                print(
+                    "Continuing with the next PDF..."
+                )
+
+    # ---------------------------------------------------------
+    # 12. Final summary
+    # ---------------------------------------------------------
+    print("\n" + "=" * 70)
+    print("AYURNEX INGESTION SUMMARY")
+    print("=" * 70)
+
+    print(
+        f"New documents stored: "
+        f"{total_documents}"
+    )
+
+    print(
+        f"New chunks stored: "
+        f"{total_chunks}"
+    )
+
+    print(
+        f"Skipped documents: "
+        f"{skipped_documents}"
+    )
+
+    print(
+        f"Failed documents: "
+        f"{failed_documents}"
+    )
+
+    print("=" * 70)
 
 
 if __name__ == "__main__":
     try:
         ingest(Settings.from_env())
     except Exception as exc:
-        raise SystemExit(f"Ingestion failed: {exc}")
+        raise SystemExit(
+            f"Ingestion failed: {exc}"
+        )
