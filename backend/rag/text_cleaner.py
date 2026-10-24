@@ -26,7 +26,6 @@ def clean_page_text(text: str, repeated_lines: set[str] | None = None) -> str:
     result = re.sub(r"\n{3,}", "\n\n", result)
     return result.strip()
 
-
 def clean_pages(pages: list[tuple[int, str]]) -> list[tuple[int, str]]:
     repeated = _common_edge_lines([text for _, text in pages])
     return [(number, clean_page_text(text, repeated)) for number, text in pages]
